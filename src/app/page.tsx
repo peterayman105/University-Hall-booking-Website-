@@ -15,6 +15,16 @@ export default function Home() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  async function readPhotoFile(file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Could not read photo"));
+      reader.readAsDataURL(file);
+    });
+    setSignupPhotoUrl(dataUrl);
+  }
+
   async function parseAuthJson(res: Response) {
     const text = await res.text();
     const trimmed = text.trim();
@@ -176,6 +186,17 @@ export default function Home() {
                     value={signupPhotoUrl}
                     onChange={(e) => setSignupPhotoUrl(e.target.value)}
                     placeholder="https://…"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="mt-2 block w-full text-xs text-slate-300 file:mr-3 file:rounded-lg file:border file:border-white/15 file:bg-slate-800/70 file:px-3 file:py-1.5 file:text-xs"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      void readPhotoFile(file).catch(() => setError("Could not read selected image."));
+                      e.currentTarget.value = "";
+                    }}
                   />
                 </div>
               </>

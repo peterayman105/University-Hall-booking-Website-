@@ -22,6 +22,16 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  async function readPhotoFile(file: File) {
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Could not read photo"));
+      reader.readAsDataURL(file);
+    });
+    setPhotoUrl(dataUrl);
+  }
+
   useEffect(() => {
     fetch("/api/auth/me")
       .then(async (r) => {
@@ -114,6 +124,17 @@ export default function ProfilePage() {
             value={photoUrl}
             onChange={(e) => setPhotoUrl(e.target.value)}
             placeholder="https://…"
+          />
+          <input
+            type="file"
+            accept="image/*"
+            className="mt-2 block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:px-3 file:py-1.5 file:text-xs dark:text-slate-300 dark:file:border-slate-600 dark:file:bg-slate-800"
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              void readPhotoFile(file).catch(() => setError("Could not read selected image."));
+              e.currentTarget.value = "";
+            }}
           />
         </div>
         {error ? <p className="text-sm text-red-600">{error}</p> : null}

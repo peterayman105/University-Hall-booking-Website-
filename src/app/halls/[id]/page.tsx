@@ -13,6 +13,7 @@ type Hall = {
   seatingType: string;
   pricePerHour: number;
   photoUrl: string | null;
+  photos?: string[];
 };
 
 type Review = {
@@ -48,6 +49,9 @@ export default function HallDetailPage() {
 
   const [rRating, setRRating] = useState(5);
   const [rComment, setRComment] = useState("");
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/halls/${id}`);
@@ -192,6 +196,41 @@ export default function HallDetailPage() {
   if (!hall) return <p className="text-slate-500">Loading…</p>;
 
   const today = new Date().toISOString().slice(0, 10);
+  const photos = Array.isArray(hall.photos) && hall.photos.length > 0 ? hall.photos : hall.photoUrl ? [hall.photoUrl] : [];
+  const safeIndex = photos.length === 0 ? 0 : Math.min(photoIndex, photos.length - 1);
+  const primaryPhoto = photos.length > 0 ? photos[safeIndex] : null;
+
+  function prevPhoto() {
+    if (photos.length === 0) return;
+    setPhotoIndex((i) => (i - 1 + photos.length) % photos.length);
+  }
+
+  function nextPhoto() {
+    if (photos.length === 0) return;
+    setPhotoIndex((i) => (i + 1) % photos.length);
+  }
+
+  function handleTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    setTouchEndX(null);
+    setTouchStartX(e.touches[0].clientX);
+  }
+
+  function handleTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    setTouchEndX(e.touches[0].clientX);
+  }
+
+  function handleTouchEnd() {
+    if (touchStartX === null || touchEndX === null) return;
+    const delta = touchStartX - touchEndX;
+    const threshold = 40; // px
+    if (delta > threshold) {
+      nextPhoto();
+    } else if (delta < -threshold) {
+      prevPhoto();
+    }
+    setTouchStartX(null);
+    setTouchEndX(null);
+  }
 
   return (
     <div>
@@ -201,10 +240,43 @@ export default function HallDetailPage() {
 
       <div className="mt-6 grid gap-8 lg:grid-cols-2">
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-          <div className="relative aspect-video bg-slate-200 dark:bg-slate-800">
-            {hall.photoUrl ? (
+          <div
+            className="relative aspect-video bg-slate-200 dark:bg-slate-800"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
+            {primaryPhoto ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={hall.photoUrl} alt="" className="h-full w-full object-cover" />
+              <img src={primaryPhoto} alt="" className="h-full w-full object-cover" />
+            ) : null}
+            {photos.length > 1 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={prevPhoto}
+                  className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60"
+                  aria-label="Previous photo"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={nextPhoto}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/40 p-2 text-white hover:bg-black/60"
+                  aria-label="Next photo"
+                >
+                  ›
+                </button>
+                <div className="pointer-events-none absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
+                  {photos.map((_, i) => (
+                    <span
+                      key={i}
+                      className={`h-1.5 w-1.5 rounded-full ${i === safeIndex ? "bg-white" : "bg-white/50"}`}
+                    />
+                  ))}
+                </div>
+              </>
             ) : null}
           </div>
           <div className="p-6">
@@ -217,6 +289,24 @@ export default function HallDetailPage() {
               <li>{hall.hasAC ? "Air conditioned" : "No AC"}</li>
               <li>{hall.seatingType === "ESCALATED" ? "Escalated seating" : "Flat seating"}</li>
             </ul>
+            {photos.length > 1 ? (
+              <div className="mt-4">
+                <p className="mb-2 text-xs font-medium text-slate-500">More photos</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {photos.slice(1).map((photo, idx) => (
+                    <a
+                      key={`${photo}-${idx}`}
+                      href={photo}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+                    >
+                      <img src={photo} alt="" className="h-16 w-full object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
             {role === "CUSTOMER" ? (
               <button
                 type="button"

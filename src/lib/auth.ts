@@ -37,7 +37,8 @@ export async function verifyToken(token: string): Promise<SessionPayload | null>
 }
 
 export async function getSession(): Promise<SessionPayload | null> {
-  const jar = cookies();
+  // In newer Next.js versions `cookies()` is async; `await` also works in older ones.
+  const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
   if (!token) return null;
   return verifyToken(token);

@@ -32,6 +32,7 @@ model Hall {
   updatedAt    DateTime @updatedAt
   bookings     Booking[]
   reviews      Review[]
+  images       HallImage[]
 }
 
 model Booking {
@@ -60,6 +61,16 @@ model Review {
   rejectReason String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+}
+
+model HallImage {
+  id        String   @id @default(cuid())
+  hallId    String
+  url       String
+  createdAt DateTime @default(now())
   hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
 
   @@index([hallId])

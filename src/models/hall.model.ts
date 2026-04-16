@@ -9,6 +9,7 @@ export type HallCreateInput = {
   seatingType: string;
   pricePerHour: number;
   photoUrl: string | null;
+  photos: string[];
 };
 
 /**
@@ -16,13 +17,27 @@ export type HallCreateInput = {
  */
 export const HallModel = {
   findAllOrdered() {
-    return prisma.hall.findMany({ orderBy: { name: "asc" } });
+    return prisma.hall.findMany({
+      orderBy: { name: "asc" },
+      include: {
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
   },
 
   findManyFiltered(where: Record<string, unknown>) {
     return prisma.hall.findMany({
       where,
       orderBy: { name: "asc" },
+      include: {
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
     });
   },
 
@@ -33,15 +48,61 @@ export const HallModel = {
   },
 
   findById(id: string) {
-    return prisma.hall.findUnique({ where: { id } });
+    return prisma.hall.findUnique({
+      where: { id },
+      include: {
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
   },
 
   create(data: HallCreateInput) {
-    return prisma.hall.create({ data });
+    return prisma.hall.create({
+      data: {
+        name: data.name,
+        capacity: data.capacity,
+        hasProjector: data.hasProjector,
+        hasAC: data.hasAC,
+        seatingType: data.seatingType,
+        pricePerHour: data.pricePerHour,
+        photoUrl: data.photoUrl,
+        images: {
+          create: data.photos.map((url) => ({ url })),
+        },
+      },
+      include: {
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
   },
 
-  update(id: string, data: Record<string, unknown>) {
-    return prisma.hall.update({ where: { id }, data });
+  update(id: string, data: Record<string, unknown>, photos?: string[]) {
+    return prisma.hall.update({
+      where: { id },
+      data: {
+        ...data,
+        ...(photos
+          ? {
+              images: {
+                deleteMany: {},
+                create: photos.map((url) => ({ url })),
+              },
+            }
+          : {}),
+      },
+      include: {
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+    });
   },
 
   countBlockingBookings(hallId: string) {
@@ -80,6 +141,11 @@ export const HallModel = {
         hasProjector: true,
         hasAC: true,
         seatingType: true,
+        photoUrl: true,
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
   },
@@ -96,6 +162,11 @@ export const HallModel = {
         hasProjector: true,
         hasAC: true,
         seatingType: true,
+        photoUrl: true,
+        images: {
+          select: { url: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
   },

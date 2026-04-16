@@ -13,6 +13,7 @@ type Hall = {
   seatingType: string;
   pricePerHour: number;
   photoUrl: string | null;
+  photos?: string[];
 };
 
 export default function HallsBrowsePage() {
@@ -304,9 +305,13 @@ export default function HallsBrowsePage() {
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="relative aspect-video bg-slate-200 dark:bg-slate-800">
-                  {h.photoUrl ? (
+                  {((h.photos && h.photos[0]) || h.photoUrl) ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={h.photoUrl} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={((h.photos && h.photos[0]) || h.photoUrl) || undefined}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
                   ) : null}
                 </div>
                 <div className="p-4">

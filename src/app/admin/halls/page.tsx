@@ -12,6 +12,7 @@ type Hall = {
   seatingType: string;
   pricePerHour: number;
   photoUrl: string | null;
+  photos: string[];
 };
 
 const empty: Hall = {
@@ -23,6 +24,7 @@ const empty: Hall = {
   seatingType: "FLAT",
   pricePerHour: 100,
   photoUrl: "",
+  photos: [],
 };
 
 export default function AdminHallsPage() {
@@ -32,13 +34,35 @@ export default function AdminHallsPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [hallToDelete, setHallToDelete] = useState<string | null>(null);
+  const [photoInput, setPhotoInput] = useState("");
+
+  const normalizeHall = useCallback((raw: unknown): Hall => {
+    const h = raw as Partial<Hall>;
+    const photos =
+      Array.isArray(h.photos) && h.photos.length > 0
+        ? h.photos.filter((p): p is string => typeof p === "string" && p.trim().length > 0)
+        : h.photoUrl
+          ? [h.photoUrl]
+          : [];
+    return {
+      id: String(h.id || ""),
+      name: String(h.name || ""),
+      capacity: Number(h.capacity || 0),
+      hasProjector: Boolean(h.hasProjector),
+      hasAC: Boolean(h.hasAC),
+      seatingType: String(h.seatingType || "FLAT"),
+      pricePerHour: Number(h.pricePerHour || 0),
+      photoUrl: photos[0] || null,
+      photos,
+    };
+  }, []);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/halls");
     const data = await res.json();
     if (!res.ok) throw new Error(data.error);
-    setHalls(data.halls);
-  }, []);
+    setHalls((data.halls || []).map((x: unknown) => normalizeHall(x)));
+  }, [normalizeHall]);
 
   useEffect(() => {
     load()
@@ -60,7 +84,7 @@ export default function AdminHallsPage() {
             hasAC: h.hasAC,
             seatingType: h.seatingType,
             pricePerHour: h.pricePerHour,
-            photoUrl: h.photoUrl || null,
+            photos: h.photos,
           }),
         });
         const data = await res.json();
@@ -76,7 +100,7 @@ export default function AdminHallsPage() {
             hasAC: h.hasAC,
             seatingType: h.seatingType,
             pricePerHour: h.pricePerHour,
-            photoUrl: h.photoUrl || null,
+            photos: h.photos,
           }),
         });
         const data = await res.json();
@@ -84,6 +108,7 @@ export default function AdminHallsPage() {
       }
       setEditing(null);
       setCreating(false);
+      setPhotoInput("");
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
@@ -156,15 +181,91 @@ export default function AdminHallsPage() {
           <option value="ESCALATED">Escalated (tiered)</option>
         </select>
       </label>
-      <label className="text-xs text-slate-500">
-        Photo URL
-        <input
-          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
-          value={h.photoUrl || ""}
-          onChange={(e) => onChange({ ...h, photoUrl: e.target.value })}
-          placeholder="https://…"
-        />
-      </label>
+      <div className="space-y-2">
+        <label className="text-xs text-slate-500">
+          Add photo URL
+          <div className="mt-1 flex gap-2">
+            <input
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+              value={photoInput}
+              onChange={(e) => setPhotoInput(e.target.value)}
+              placeholder="https://…"
+            />
+            <button
+              type="button"
+              className="rounded-lg border border-slate-300 px-3 text-xs dark:border-slate-600"
+              onClick={() => {
+                const next = photoInput.trim();
+                if (!next) return;
+                if (!h.photos.includes(next)) {
+                  const merged = [...h.photos, next];
+                  onChange({ ...h, photos: merged, photoUrl: merged[0] || null });
+                }
+                setPhotoInput("");
+              }}
+            >
+              Add
+            </button>
+          </div>
+        </label>
+        <label className="text-xs text-slate-500">
+          Or upload local photos
+          <input
+            type="file"
+            accept="image/*"
+            multiple
+            className="mt-1 block w-full text-xs text-slate-600 file:mr-3 file:rounded-lg file:border file:border-slate-300 file:px-3 file:py-1.5 file:text-xs dark:text-slate-300 dark:file:border-slate-600 dark:file:bg-slate-800"
+            onChange={(e) => {
+              const files = Array.from(e.target.files || []);
+              if (files.length === 0) return;
+              Promise.all(
+                files.map(
+                  (file) =>
+                    new Promise<string>((resolve, reject) => {
+                      const reader = new FileReader();
+                      reader.onload = () => resolve(String(reader.result || ""));
+                      reader.onerror = () => reject(new Error("Could not read file"));
+                      reader.readAsDataURL(file);
+                    })
+                )
+              )
+                .then((urls) => {
+                  const merged = [...h.photos];
+                  urls.forEach((url) => {
+                    if (url && !merged.includes(url)) merged.push(url);
+                  });
+                  onChange({ ...h, photos: merged, photoUrl: merged[0] || null });
+                })
+                .catch(() => setError("Could not read one of the selected files."));
+              e.currentTarget.value = "";
+            }}
+          />
+        </label>
+        {h.photos.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {h.photos.map((p, i) => (
+              <div
+                key={`${p}-${i}`}
+                className="relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+              >
+                <img src={p} alt="" className="h-20 w-full object-cover" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextPhotos = h.photos.filter((_, idx) => idx !== i);
+                    onChange({ ...h, photos: nextPhotos, photoUrl: nextPhotos[0] || null });
+                  }}
+                  className="absolute right-1 top-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-slate-400">No photos added yet.</p>
+        )}
+      </div>
       <div className="flex gap-2">
         <button
           type="button"
@@ -178,6 +279,7 @@ export default function AdminHallsPage() {
           onClick={() => {
             setEditing(null);
             setCreating(false);
+            setPhotoInput("");
           }}
           className="rounded-lg border border-slate-200 px-4 py-2 text-sm dark:border-slate-600"
         >
@@ -198,6 +300,7 @@ export default function AdminHallsPage() {
           onClick={() => {
             setCreating(true);
             setEditing({ ...empty, id: "" });
+            setPhotoInput("");
           }}
           className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white dark:bg-sky-600"
         >
@@ -230,9 +333,9 @@ export default function AdminHallsPage() {
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="relative aspect-video bg-slate-200 dark:bg-slate-800">
-              {hall.photoUrl ? (
+              {hall.photos[0] || hall.photoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={hall.photoUrl} alt="" className="h-full w-full object-cover" />
+                <img src={hall.photos[0] || hall.photoUrl || ""} alt="" className="h-full w-full object-cover" />
               ) : null}
             </div>
             <div className="p-4">
@@ -248,6 +351,7 @@ export default function AdminHallsPage() {
                   onClick={() => {
                     setCreating(false);
                     setEditing({ ...hall });
+                    setPhotoInput("");
                   }}
                   className="rounded-lg bg-slate-100 px-3 py-1.5 text-sm dark:bg-slate-800"
                 >

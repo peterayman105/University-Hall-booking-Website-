@@ -37,6 +37,19 @@ function buildHallListWhere(searchParams: URLSearchParams): Record<string, unkno
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+function cleanPhotoEntries(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((x) => String(x || "").trim())
+    .filter((x) => x.length > 0);
+}
+
+function hallWithPhotos<T extends { photoUrl?: string | null; images?: { url: string }[] }>(hall: T) {
+  const fromImages = Array.isArray(hall.images) ? hall.images.map((img) => img.url).filter(Boolean) : [];
+  const photos = fromImages.length > 0 ? fromImages : hall.photoUrl ? [hall.photoUrl] : [];
+  return { ...hall, photos };
+}
+
 function localTodayYmd(): string {
   const t = new Date();
   const y = t.getFullYear();
@@ -62,7 +75,7 @@ export const HallController = {
       return fail(401, "Unauthorized");
     }
     if (isSuperadmin(session.role)) {
-      const halls = await HallModel.findAllOrdered();
+      const halls = (await HallModel.findAllOrdered()).map(hallWithPhotos);
       return ok({ halls });
     }
     const where = buildHallListWhere(searchParams);
@@ -70,7 +83,7 @@ export const HallController = {
       HallModel.maxCapacity(),
       HallModel.findManyFiltered(where),
     ]);
-    let halls = hallsFiltered;
+    let halls = hallsFiltered.map(hallWithPhotos);
 
     const freeDate = searchParams.get("freeDate");
     const freeStartRaw = searchParams.get("freeStartHour");
@@ -109,7 +122,11 @@ export const HallController = {
       const hasAC = Boolean(b.hasAC);
       const seatingType = String(b.seatingType || "").toUpperCase();
       const pricePerHour = Number(b.pricePerHour);
-      const photoUrl = b.photoUrl ? String(b.photoUrl).trim() : null;
+      const photos = cleanPhotoEntries(b.photos);
+      if (photos.length === 0 && b.photoUrl) {
+        photos.push(String(b.photoUrl).trim());
+      }
+      const photoUrl = photos[0] || null;
 
       if (!name || !Number.isFinite(capacity) || capacity < 1) return fail(400, "Invalid hall data");
       if (seatingType !== SEATING.FLAT && seatingType !== SEATING.ESCALATED) {
@@ -124,9 +141,10 @@ export const HallController = {
         hasAC,
         seatingType,
         pricePerHour,
-        photoUrl: photoUrl || null,
+        photoUrl,
+        photos,
       });
-      return ok({ hall });
+      return ok({ hall: hallWithPhotos(hall) });
     } catch (e) {
       console.error(e);
       return fail(500, "Server error");
@@ -144,7 +162,8 @@ export const HallController = {
     }>
   > {
     if (!session) return fail(401, "Unauthorized");
-    const hall = await HallModel.findById(id);
+    const hallRaw = await HallModel.findById(id);
+    const hall = hallRaw ? hallWithPhotos(hallRaw) : null;
     if (!hall) return fail(404, "Not found");
     const reviews = await ReviewModel.findApprovedByHall(id);
     let canReview = false;
@@ -174,10 +193,17 @@ export const HallController = {
         data.seatingType = st;
       }
       if (b.pricePerHour != null) data.pricePerHour = Number(b.pricePerHour);
-      if (b.photoUrl !== undefined) data.photoUrl = b.photoUrl ? String(b.photoUrl) : null;
+      let nextPhotos: string[] | undefined;
+      if (b.photos !== undefined || b.photoUrl !== undefined) {
+        nextPhotos = cleanPhotoEntries(b.photos);
+        if (nextPhotos.length === 0 && b.photoUrl) {
+          nextPhotos.push(String(b.photoUrl).trim());
+        }
+        data.photoUrl = nextPhotos[0] || null;
+      }
 
-      const hall = await HallModel.update(id, data);
-      return ok({ hall });
+      const hall = await HallModel.update(id, data, nextPhotos);
+      return ok({ hall: hallWithPhotos(hall) });
     } catch {
       return fail(400, "Update failed");
     }
