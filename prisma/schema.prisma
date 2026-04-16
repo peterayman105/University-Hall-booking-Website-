@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String
+  photoUrl     String?
+  createdAt    DateTime  @default(now())
+  bookings     Booking[]
+  reviews      Review[]
+}
+
+model Hall {
+  id           String   @id @default(cuid())
+  name         String
+  capacity     Int
+  hasProjector Boolean  @default(false)
+  hasAC        Boolean  @default(false)
+  seatingType  String
+  pricePerHour Float
+  photoUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  bookings     Booking[]
+  reviews      Review[]
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  userId    String
+  hallId    String
+  date      String
+  startHour Int
+  endHour   Int
+  status    String   @default("PENDING")
+  rejectReason String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Restrict)
+
+  @@index([hallId, date])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  hallId    String
+  rating    Int
+  comment   String
+  status    String   @default("PENDING")
+  rejectReason String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  hall      Hall     @relation(fields: [hallId], references: [id], onDelete: Cascade)
+
+  @@index([hallId])
+}
