@@ -47,6 +47,12 @@ export const HallModel = {
     return m != null && m >= 1 ? m : 1;
   },
 
+  async maxPricePerHour(): Promise<number> {
+    const r = await prisma.hall.aggregate({ _max: { pricePerHour: true } });
+    const m = r._max.pricePerHour;
+    return m != null && m >= 0 ? m : 0;
+  },
+
   findById(id: string) {
     return prisma.hall.findUnique({
       where: { id },

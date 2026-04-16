@@ -69,6 +69,7 @@ export const HallController = {
     ActionResult<{
       halls: Awaited<ReturnType<typeof HallModel.findAllOrdered>>;
       maxCapacity?: number;
+      maxPrice?: number;
     }>
   > {
     if (!session || (!isCustomer(session.role) && !isSuperadmin(session.role) && !isViewer(session.role))) {
@@ -79,8 +80,9 @@ export const HallController = {
       return ok({ halls });
     }
     const where = buildHallListWhere(searchParams);
-    const [maxCapacity, hallsFiltered] = await Promise.all([
+    const [maxCapacity, maxPrice, hallsFiltered] = await Promise.all([
       HallModel.maxCapacity(),
+      HallModel.maxPricePerHour(),
       HallModel.findManyFiltered(where),
     ]);
     let halls = hallsFiltered.map(hallWithPhotos);
@@ -109,7 +111,7 @@ export const HallController = {
       }
     }
 
-    return ok({ halls, maxCapacity });
+    return ok({ halls, maxCapacity, maxPrice });
   },
 
   async create(session: SessionPayload | null, body: unknown): Promise<ActionResult<{ hall: unknown }>> {

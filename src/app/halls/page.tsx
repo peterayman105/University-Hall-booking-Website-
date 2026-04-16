@@ -24,6 +24,7 @@ export default function HallsBrowsePage() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(2000);
+  const [maxAllowedPrice, setMaxAllowedPrice] = useState(2000);
   const [minSeats, setMinSeats] = useState(1);
   const [hasProjector, setHasProjector] = useState(false);
   const [hasAC, setHasAC] = useState(false);
@@ -79,6 +80,14 @@ export default function HallsBrowsePage() {
     const d = await res.json();
     if (res.ok) {
       setHalls(d.halls);
+      if (typeof d.maxPrice === "number" && Number.isFinite(d.maxPrice)) {
+        const apiMaxPrice = Math.max(0, Math.ceil(d.maxPrice));
+        setMaxAllowedPrice(Math.max(2000, apiMaxPrice));
+        setMaxPrice((prev) => {
+          if (prev === 2000 || prev < apiMaxPrice) return Math.max(2000, apiMaxPrice);
+          return prev;
+        });
+      }
       let cap = 1;
       if (typeof d.maxCapacity === "number" && Number.isFinite(d.maxCapacity)) {
         cap = Math.max(1, Math.floor(d.maxCapacity));
@@ -162,6 +171,7 @@ export default function HallsBrowsePage() {
                   type="number"
                   className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
                   value={maxPrice}
+                  max={maxAllowedPrice}
                   onChange={(e) => setMaxPrice(Number(e.target.value) || 0)}
                 />
               </label>
