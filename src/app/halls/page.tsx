@@ -14,6 +14,7 @@ type Hall = {
   pricePerHour: number;
   photoUrl: string | null;
   photos?: string[];
+  extras?: string | null;
 };
 
 export default function HallsBrowsePage() {
@@ -333,6 +334,11 @@ export default function HallsBrowsePage() {
                     {h.hasProjector ? "Projector" : "No projector"} · {h.hasAC ? "AC" : "No AC"} ·{" "}
                     {h.seatingType === "ESCALATED" ? "Escalated seating" : "Flat seating"}
                   </p>
+                  {h.extras ? (
+                    <p className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                      Extra features
+                    </p>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <Link
                       href={`/halls/${h.id}`}

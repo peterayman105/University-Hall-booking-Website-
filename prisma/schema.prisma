@@ -28,6 +28,7 @@ model Hall {
   seatingType  String
   pricePerHour Float
   photoUrl     String?
+  extras       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   bookings     Booking[]

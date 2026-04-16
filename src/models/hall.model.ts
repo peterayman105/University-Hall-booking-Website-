@@ -10,6 +10,7 @@ export type HallCreateInput = {
   pricePerHour: number;
   photoUrl: string | null;
   photos: string[];
+  extras?: string | null;
 };
 
 /**
@@ -75,6 +76,7 @@ export const HallModel = {
         seatingType: data.seatingType,
         pricePerHour: data.pricePerHour,
         photoUrl: data.photoUrl,
+        extras: data.extras ?? null,
         images: {
           create: data.photos.map((url) => ({ url })),
         },

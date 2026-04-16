@@ -124,6 +124,7 @@ export const HallController = {
       const hasAC = Boolean(b.hasAC);
       const seatingType = String(b.seatingType || "").toUpperCase();
       const pricePerHour = Number(b.pricePerHour);
+      const extras = b.extras ? String(b.extras).trim() : null;
       const photos = cleanPhotoEntries(b.photos);
       if (photos.length === 0 && b.photoUrl) {
         photos.push(String(b.photoUrl).trim());
@@ -145,6 +146,7 @@ export const HallController = {
         pricePerHour,
         photoUrl,
         photos,
+        extras,
       });
       return ok({ hall: hallWithPhotos(hall) });
     } catch (e) {
@@ -195,6 +197,7 @@ export const HallController = {
         data.seatingType = st;
       }
       if (b.pricePerHour != null) data.pricePerHour = Number(b.pricePerHour);
+      if (b.extras !== undefined) data.extras = b.extras ? String(b.extras).trim() : null;
       let nextPhotos: string[] | undefined;
       if (b.photos !== undefined || b.photoUrl !== undefined) {
         nextPhotos = cleanPhotoEntries(b.photos);

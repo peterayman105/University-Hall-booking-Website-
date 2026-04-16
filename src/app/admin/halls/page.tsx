@@ -13,6 +13,7 @@ type Hall = {
   pricePerHour: number;
   photoUrl: string | null;
   photos: string[];
+  extras?: string | null;
 };
 
 const empty: Hall = {
@@ -22,9 +23,10 @@ const empty: Hall = {
   hasProjector: true,
   hasAC: true,
   seatingType: "FLAT",
-  pricePerHour: 100,
+  pricePerHour: 0,
   photoUrl: "",
   photos: [],
+  extras: null,
 };
 
 export default function AdminHallsPage() {
@@ -54,6 +56,7 @@ export default function AdminHallsPage() {
       pricePerHour: Number(h.pricePerHour || 0),
       photoUrl: photos[0] || null,
       photos,
+      extras: typeof h.extras === "string" ? h.extras : null,
     };
   }, []);
 
@@ -83,8 +86,9 @@ export default function AdminHallsPage() {
             hasProjector: h.hasProjector,
             hasAC: h.hasAC,
             seatingType: h.seatingType,
-            pricePerHour: h.pricePerHour,
+            pricePerHour: Number(h.pricePerHour || 0),
             photos: h.photos,
+            extras: h.extras || null,
           }),
         });
         const data = await res.json();
@@ -99,8 +103,9 @@ export default function AdminHallsPage() {
             hasProjector: h.hasProjector,
             hasAC: h.hasAC,
             seatingType: h.seatingType,
-            pricePerHour: h.pricePerHour,
+            pricePerHour: Number(h.pricePerHour || 0),
             photos: h.photos,
+            extras: h.extras || null,
           }),
         });
         const data = await res.json();
@@ -145,7 +150,7 @@ export default function AdminHallsPage() {
           />
         </label>
         <label className="text-xs text-slate-500">
-          Price / hour (EGP)
+          Price / hour (EGP, optional; can be 0)
           <input
             type="number"
             className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 dark:border-slate-600 dark:bg-slate-800 dark:text-white"
@@ -154,6 +159,16 @@ export default function AdminHallsPage() {
           />
         </label>
       </div>
+      <label className="text-xs text-slate-500">
+        Notes / extras (optional)
+        <textarea
+          className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-white"
+          rows={2}
+          value={h.extras || ""}
+          onChange={(e) => onChange({ ...h, extras: e.target.value })}
+          placeholder="Any extra features or notes for customers"
+        />
+      </label>
       <label className="flex items-center gap-2 text-sm dark:text-slate-200">
         <input
           type="checkbox"
@@ -345,6 +360,7 @@ export default function AdminHallsPage() {
                 {hall.hasProjector ? "Projector" : "No projector"} · {hall.hasAC ? "AC" : "No AC"} ·{" "}
                 {hall.seatingType === "ESCALATED" ? "Escalated" : "Flat"}
               </p>
+              {hall.extras ? <p className="mt-1 text-xs text-slate-500">Extras: {hall.extras}</p> : null}
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"

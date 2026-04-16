@@ -14,6 +14,7 @@ type Hall = {
   pricePerHour: number;
   photoUrl: string | null;
   photos?: string[];
+  extras?: string | null;
 };
 
 type Review = {
@@ -289,6 +290,12 @@ export default function HallDetailPage() {
               <li>{hall.hasAC ? "Air conditioned" : "No AC"}</li>
               <li>{hall.seatingType === "ESCALATED" ? "Escalated seating" : "Flat seating"}</li>
             </ul>
+            {hall.extras ? (
+              <div className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-800/80 dark:text-slate-200">
+                <p className="font-semibold text-slate-900 dark:text-white">Extras</p>
+                <p className="mt-1">{hall.extras}</p>
+              </div>
+            ) : null}
             {photos.length > 1 ? (
               <div className="mt-4">
                 <p className="mb-2 text-xs font-medium text-slate-500">More photos</p>
