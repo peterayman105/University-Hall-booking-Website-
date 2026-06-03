@@ -65,15 +65,20 @@ async function main() {
 
   const canonicalNames = hallRows.map((r) => r.name);
 
-  // Remove old demo halls that are not in the official list (only if they have no bookings).
+  // Always remove old demo halls (e.g. "Lecture Hall A") even if they have test bookings/reviews.
   const staleHalls = await prisma.hall.findMany({
     where: { name: { notIn: canonicalNames } },
-    include: { _count: { select: { bookings: true, reviews: true } } },
+    select: { id: true, name: true },
   });
   for (const hall of staleHalls) {
-    if (hall._count.bookings === 0 && hall._count.reviews === 0) {
-      await prisma.hall.delete({ where: { id: hall.id } });
-    }
+    await prisma.booking.deleteMany({ where: { hallId: hall.id } });
+    await prisma.review.deleteMany({ where: { hallId: hall.id } });
+    await prisma.hall.delete({ where: { id: hall.id } });
+  }
+  if (staleHalls.length > 0) {
+    console.log(
+      `Removed ${staleHalls.length} outdated hall(s): ${staleHalls.map((h) => h.name).join(", ")}`
+    );
   }
 
   const seatingTypes = ["ESCALATED", "FLAT", "U_SHAPE"];
@@ -130,8 +135,14 @@ async function main() {
   }
 
   const hallCount = await prisma.hall.count();
+  const expected = hallRows.length;
+  if (hallCount !== expected) {
+    console.warn(
+      `WARNING: expected ${expected} halls but found ${hallCount}. Run: npm run db:reset`
+    );
+  }
   console.log(
-    `Seed OK — ${hallCount} halls in database — admin@findyourspot.edu / ${ADMIN_PASSWORD}, customer@findyourspot.edu / ${CUSTOMER_PASSWORD}`
+    `Seed OK — ${hallCount} halls (expected ${expected}) — admin@findyourspot.edu / ${ADMIN_PASSWORD}, customer@findyourspot.edu / ${CUSTOMER_PASSWORD}`
   );
 }
 
