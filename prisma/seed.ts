@@ -37,58 +37,101 @@ async function main() {
     },
   });
 
-  const halls = [
-    {
-      name: "Lecture Hall A",
-      capacity: 120,
-      hasProjector: true,
-      hasAC: true,
-      seatingType: "ESCALATED",
-      pricePerHour: 350,
-      photoUrl:
-        "https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80",
-    },
-    {
-      name: "Seminar Room B12",
-      capacity: 40,
-      hasProjector: true,
-      hasAC: true,
-      seatingType: "FLAT",
-      pricePerHour: 180,
-      photoUrl:
-        "https://images.unsplash.com/photo-1562774053-701939374585?w=800&q=80",
-    },
-    {
-      name: "Training Lab C5",
-      capacity: 28,
-      hasProjector: false,
-      hasAC: true,
-      seatingType: "FLAT",
-      pricePerHour: 120,
-      photoUrl:
-        "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?w=800&q=80",
-    },
-    {
-      name: "Auditorium East",
-      capacity: 280,
-      hasProjector: true,
-      hasAC: false,
-      seatingType: "ESCALATED",
-      pricePerHour: 520,
-      photoUrl:
-        "https://images.unsplash.com/photo-1517457373958-b7bdd4587205?w=800&q=80",
-    },
+  const hallRows = [
+    { name: "A1", capacity: 25 },
+    { name: "Hall1", capacity: 60 },
+    { name: "B1", capacity: 55 },
+    { name: "B2", capacity: 25 },
+    { name: "B3", capacity: 50 },
+    { name: "B4", capacity: 40 },
+    { name: "B5", capacity: 50 },
+    { name: "B6", capacity: 50 },
+    { name: "B7", capacity: 25 },
+    { name: "C1", capacity: 55 },
+    { name: "C2", capacity: 25 },
+    { name: "C3", capacity: 25 },
+    { name: "C4", capacity: 25 },
+    { name: "Hall2", capacity: 50 },
+    { name: "C5", capacity: 35 },
+    { name: "Hall3", capacity: 55 },
+    { name: "C6", capacity: 25 },
+    { name: "C7", capacity: 25 },
+    { name: "C8", capacity: 25 },
+    { name: "معمل 7", capacity: 60 },
+    { name: "Hall4", capacity: 55 },
+    { name: "معمل 6", capacity: 35 },
+    { name: "Hall5", capacity: 55 },
   ];
 
-  for (const h of halls) {
-    const existing = await prisma.hall.findFirst({ where: { name: h.name } });
-    if (!existing) {
-      await prisma.hall.create({ data: h });
+  const canonicalNames = hallRows.map((r) => r.name);
+
+  // Remove old demo halls that are not in the official list (only if they have no bookings).
+  const staleHalls = await prisma.hall.findMany({
+    where: { name: { notIn: canonicalNames } },
+    include: { _count: { select: { bookings: true, reviews: true } } },
+  });
+  for (const hall of staleHalls) {
+    if (hall._count.bookings === 0 && hall._count.reviews === 0) {
+      await prisma.hall.delete({ where: { id: hall.id } });
     }
   }
 
+  const seatingTypes = ["ESCALATED", "FLAT", "U_SHAPE"];
+  const extrasOptions = [
+    "Whiteboard + marker set",
+    "Dual display screens",
+    "Sound system with wireless mic",
+    "Instructor desk and HDMI switch",
+    "Fast campus Wi-Fi coverage",
+    "Accessible entrance and wide aisles",
+  ];
+
+  for (const [idx, row] of hallRows.entries()) {
+    const hallPhotos = [
+      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-1/1200/800`,
+      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-2/1200/800`,
+      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-3/1200/800`,
+    ];
+
+    const hallData = {
+      name: row.name,
+      capacity: row.capacity,
+      hasProjector: idx % 2 === 0,
+      hasAC: idx % 3 !== 0,
+      seatingType: seatingTypes[idx % seatingTypes.length],
+      pricePerHour: 0,
+      photoUrl: hallPhotos[0],
+      extras: extrasOptions[idx % extrasOptions.length],
+    };
+
+    const existing = await prisma.hall.findFirst({ where: { name: row.name } });
+    if (!existing) {
+      await prisma.hall.create({
+        data: {
+          ...hallData,
+          images: {
+            create: hallPhotos.map((url) => ({ url })),
+          },
+        },
+      });
+      continue;
+    }
+
+    await prisma.hall.update({
+      where: { id: existing.id },
+      data: {
+        ...hallData,
+        images: {
+          deleteMany: {},
+          create: hallPhotos.map((url) => ({ url })),
+        },
+      },
+    });
+  }
+
+  const hallCount = await prisma.hall.count();
   console.log(
-    `Seed OK — admin@findyourspot.edu / ${ADMIN_PASSWORD}, customer@findyourspot.edu / ${CUSTOMER_PASSWORD}`
+    `Seed OK — ${hallCount} halls in database — admin@findyourspot.edu / ${ADMIN_PASSWORD}, customer@findyourspot.edu / ${CUSTOMER_PASSWORD}`
   );
 }
 
