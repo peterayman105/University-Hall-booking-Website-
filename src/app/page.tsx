@@ -63,6 +63,7 @@ export default function Home() {
         });
         const data = await parseAuthJson(res);
         if (!res.ok) throw new Error(data.error || "Login failed");
+        if (!data.user?.role) throw new Error("Login failed");
         if (data.user.role === "SUPERADMIN") router.push("/admin/halls");
         else router.push("/halls");
       } else {
@@ -79,6 +80,7 @@ export default function Home() {
         });
         const data = await parseAuthJson(res);
         if (!res.ok) throw new Error(data.error || "Signup failed");
+        if (!data.user?.role) throw new Error("Signup failed");
         if (data.user.role === "SUPERADMIN") router.push("/admin/halls");
         else router.push("/halls");
       }
