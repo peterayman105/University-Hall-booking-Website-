@@ -97,12 +97,12 @@ export function findHallCodesInText<T extends HallNameRef>(text: string, halls: 
   while ((m = codeRe.exec(t)) !== null) {
     codes.add(normalizeHallCode(m[1]));
   }
-  for (const code of codes) {
+  codes.forEach((code) => {
     const hall = halls.find(
       (h) => h.name.replace(/\s/g, "").toLowerCase() === code.replace(/\s/g, "").toLowerCase()
     );
     if (hall && !found.some((f) => f.id === hall.id)) found.push(hall);
-  }
+  });
   return found;
 }
 

@@ -113,7 +113,7 @@ export const AuthController = {
       email: "viewer@guest.local",
       name: "Viewer",
       role: ROLES.VIEWER,
-      photoUrl: null as const,
+      photoUrl: null,
     };
     const token = await signToken({
       sub: user.id,
