@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Find Your Spot — College hall booking",
   description:
     "Helwan National University — Team 21. Hourly hall booking with admin approval, filters, and AI assistant.",
+  icons: { icon: "/logo.svg", apple: "/logo.svg" },
 };
 
 export default function RootLayout({

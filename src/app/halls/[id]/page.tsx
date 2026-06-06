@@ -1,5 +1,6 @@
 "use client";
 
+import { HallPhoto } from "@/components/HallPhoto";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -247,10 +248,7 @@ export default function HallDetailPage() {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
-            {primaryPhoto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={primaryPhoto} alt="" className="h-full w-full object-cover" />
-            ) : null}
+            <HallPhoto src={primaryPhoto} alt={hall.name} className="h-full w-full object-cover" />
             {photos.length > 1 ? (
               <>
                 <button
@@ -308,7 +306,7 @@ export default function HallDetailPage() {
                       rel="noreferrer"
                       className="overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
                     >
-                      <img src={photo} alt="" className="h-16 w-full object-cover" />
+                      <HallPhoto src={photo} alt="" className="h-16 w-full object-cover" />
                     </a>
                   ))}
                 </div>

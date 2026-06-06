@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import { PASSWORD_RULES_TEXT, validatePassword } from "@/lib/password-validation";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -105,14 +106,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-slate-900 text-white">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col justify-center px-6 py-16 lg:flex-row lg:items-center lg:gap-16">
-        <div className="mb-12 lg:mb-0 lg:max-w-md">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center gap-12 px-6 py-16 lg:flex-row lg:items-center lg:gap-16">
+        <div className="flex w-full max-w-md flex-col items-center text-center lg:flex-1 lg:items-center">
+          <BrandLogo size="hero" showText={false} variant="dark" bare className="mb-8" />
           <p className="text-sm font-medium uppercase tracking-widest text-sky-300/90">
             Helwan National University 
           </p>
-          <h1 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Find Your Spot</h1>
+          <h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">Find Your Spot</h1>
           <p className="mt-4 text-lg text-slate-300">
-            AUTOMATED HOURLY COLLEGE HALLS BOOKING. 
+            AUTOMATED HALL BOOKING SYSTEM 
           </p>
         </div>
 

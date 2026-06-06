@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { photosForHall } from "../src/lib/hall-photos";
 
 const prisma = new PrismaClient();
 
@@ -92,11 +93,7 @@ async function main() {
   ];
 
   for (const [idx, row] of hallRows.entries()) {
-    const hallPhotos = [
-      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-1/1200/800`,
-      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-2/1200/800`,
-      `https://picsum.photos/seed/${encodeURIComponent(row.name)}-3/1200/800`,
-    ];
+    const hallPhotos = photosForHall(row.name, idx);
 
     const hallData = {
       name: row.name,

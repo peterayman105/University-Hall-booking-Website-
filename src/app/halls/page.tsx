@@ -1,5 +1,7 @@
 "use client";
 
+import { HallPhoto } from "@/components/HallPhoto";
+
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CLOSE_HOUR, OPEN_HOUR } from "@/lib/constants";
@@ -316,14 +318,11 @@ export default function HallsBrowsePage() {
                 className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
               >
                 <div className="relative aspect-video bg-slate-200 dark:bg-slate-800">
-                  {((h.photos && h.photos[0]) || h.photoUrl) ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={((h.photos && h.photos[0]) || h.photoUrl) || undefined}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                  ) : null}
+                  <HallPhoto
+                    src={(h.photos && h.photos[0]) || h.photoUrl}
+                    alt={h.name}
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="p-4">
                   <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{h.name}</h2>

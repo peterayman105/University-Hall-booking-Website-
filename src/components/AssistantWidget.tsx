@@ -16,13 +16,13 @@ function welcomeCustomer(lang: AssistantLang): Msg {
     return {
       role: "assistant",
       content:
-        "مرحبًا، أنا **Spot**. اسأل عن القاعات (السعر، المقاعد، البروجيكتور، التكييف…) أو **التوفر** (مثل: متاح غدًا، قاعات فاضية يوم 2026-06-15). البيانات مباشرة من قاعدة البيانات. **للحجز** اكتب أو تحدّث بجملة واحدة: أي قاعة، أي يوم (اليوم/غدًا/تاريخ)، من أي ساعة إلى أي ساعة (مثل من 10 إلى 12).",
+        "مرحبًا، أنا **Spot**. اسأل عن القاعات — أعرض **أسماء القاعات** فقط ما لم تطلب **تفاصيل** (مثل: تفاصيل B3). أو اسأل عن **التوفر** (متاح غدًا). **للحجز**: قاعة + يوم + من ساعة إلى ساعة في جملة واحدة.",
     };
   }
   return {
     role: "assistant",
     content:
-      "Hi! I’m Spot. Ask for halls by criteria (price, seats, projector, AC…) or **availability**: e.g. 'free on 2026-06-15', 'available tomorrow'. I read the live database. **Book in plain English or Arabic** — one sentence with hall, date, and time range; I create a pending request (with optional AI help).",
+      "Hi! I’m Spot. Ask about halls — I list **names only** unless you ask for **details** (e.g. “details for B3”). Or ask **availability** (e.g. free tomorrow). **Book** in one sentence: hall, date, and time range.",
   };
 }
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { HallPhoto } from "@/components/HallPhoto";
+
 import { useCallback, useEffect, useState } from "react";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 
@@ -263,7 +265,7 @@ export default function AdminHallsPage() {
                 key={`${p}-${i}`}
                 className="relative overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
               >
-                <img src={p} alt="" className="h-20 w-full object-cover" />
+                <HallPhoto src={p} alt="" className="h-20 w-full object-cover" />
                 <button
                   type="button"
                   onClick={() => {
@@ -348,10 +350,11 @@ export default function AdminHallsPage() {
             className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
           >
             <div className="relative aspect-video bg-slate-200 dark:bg-slate-800">
-              {hall.photos[0] || hall.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={hall.photos[0] || hall.photoUrl || ""} alt="" className="h-full w-full object-cover" />
-              ) : null}
+              <HallPhoto
+                src={hall.photos[0] || hall.photoUrl}
+                alt={hall.name}
+                className="h-full w-full object-cover"
+              />
             </div>
             <div className="p-4">
               <h2 className="font-semibold text-slate-900 dark:text-white">{hall.name}</h2>

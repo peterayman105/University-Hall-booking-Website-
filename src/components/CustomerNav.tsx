@@ -1,5 +1,6 @@
 "use client";
 
+import { BrandLogo } from "@/components/BrandLogo";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -48,10 +49,11 @@ export function CustomerNav() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur dark:border-slate-700 dark:bg-slate-900/90">
-      <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
+      <div className="mx-auto flex max-w-7xl items-center gap-4 px-4 py-3">
+        <BrandLogo href="/halls" size="sm" />
         <Link
           href={role === "CUSTOMER" ? "/profile" : "/halls"}
-          className="flex items-center gap-2 font-bold text-brand-700 dark:text-sky-400"
+          className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200"
         >
           {photoUrl ? (
             <img

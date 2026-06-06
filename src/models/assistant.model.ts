@@ -1,4 +1,9 @@
 import { parseAssistantDate, formatLocalYMD } from "@/lib/assistant-date";
+import {
+  looksLikeHallBrowse,
+  resolveHallsFromMessage,
+  userWantsHallDetails,
+} from "@/lib/assistant-hall-reply";
 import { hasArabicScript, type AssistantLang } from "@/lib/assistant-locale";
 import { OPEN_HOUR, CLOSE_HOUR, SEATING } from "@/lib/constants";
 import { availableStartHours } from "@/lib/booking-utils";
@@ -141,8 +146,9 @@ const FACILITY_TOKENS = new Set([
 ]);
 
 function looksLikeHallSearch(text: string): boolean {
+  if (looksLikeHallBrowse(text)) return true;
   const t = text.toLowerCase();
-  if (t.length < 3) return false;
+  if (t.length < 2) return false;
   const keys = [
     "find",
     "search",
@@ -152,7 +158,6 @@ function looksLikeHallSearch(text: string): boolean {
     "want",
     "hall",
     "room",
-    "book",
     "cheap",
     "projector",
     " ac",
@@ -179,6 +184,17 @@ function looksLikeHallSearch(text: string): boolean {
     "campus",
     "price",
     "budget",
+    "have any",
+    "do we have",
+    "do you have",
+    "what halls",
+    "which halls",
+    "all halls",
+    "any room",
+    "big room",
+    "small room",
+    "with projector",
+    "with ac",
   ];
   return keys.some((k) => t.includes(k));
 }
@@ -321,13 +337,28 @@ function formatFreeOnReply(
   return msg;
 }
 
-function formatHallSearchReply(halls: HallSearchRow[], intro: string, lang: AssistantLang): string {
+function formatHallSearchReply(
+  halls: HallSearchRow[],
+  intro: string,
+  lang: AssistantLang,
+  includeDetails: boolean
+): string {
   if (halls.length === 0) {
     if (lang === "ar") {
       return `${intro}\n\nلا توجد قاعات مطابقة. جرّب توسيع السعر أو تقليل الفلاتر، أو افتح صفحة **القاعات** واستخدم التصفية.`;
     }
     return `${intro}\n\nNo halls in the database match those criteria. Try a higher price limit, fewer facility filters, or different name keywords — or open **Halls** and use the filter panel.`;
   }
+
+  if (!includeDetails) {
+    const names = halls.map((h) => `• **${h.name}**`);
+    const hint =
+      lang === "ar"
+        ? "\n\nلمعرفة السعة والسعر والمرافق، اكتب مثلًا: «تفاصيل B3» أو «مواصفات Hall1»."
+        : "\n\nFor capacity, price, and amenities, say e.g. “details for B3” or “specs of Hall1”.";
+    return `${intro}\n\n${names.join("\n")}${hint}`;
+  }
+
   const lines = halls.map((h) => {
     const bits =
       lang === "ar"
@@ -345,7 +376,7 @@ function formatHallSearchReply(halls: HallSearchRow[], intro: string, lang: Assi
             h.hasAC ? "AC" : "no AC",
             h.seatingType === SEATING.ESCALATED ? "escalated seating" : "flat seating",
           ];
-    return `• **${h.name}** — ${bits.join("، ")}.`;
+    return `• **${h.name}** — ${bits.join(lang === "ar" ? "، " : ", ")}.`;
   });
   return `${intro}\n\n${lines.join("\n")}`;
 }
@@ -374,7 +405,7 @@ Booking hours are typically ${OPEN_HOUR}:00–${CLOSE_HOUR}:00. You must only me
       if (/حجز|book/i.test(t)) {
         return `يمكنك الحجز من صفحة القاعة، أو قل لي في جملة واحدة: **أي قاعة**، **أي يوم** (اليوم/غدًا/تاريخ)، **من أي ساعة لأي ساعة** (مثل من 10 إلى 12). سأحوّل ذلك إلى طلب معلّق لموافقة المشرف.`;
       }
-      return "اسأل عن القاعات (سعر، مقاعد، بروجيكتور، تكييف…) أو **التوفر**: «متاح غدًا»، «قاعات فاضية يوم 2026-06-15». البيانات من قاعدة البيانات مباشرة.";
+      return "اسأل بشكل طبيعي: «ما القاعات المتوفرة»، «قاعة B3»، «تفاصيل Hall1»، أو «متاح غدًا». أعرض **الأسماء فقط** ما لم تطلب **تفاصيل**.";
     }
     if (t.includes("hour") || t.includes("time") || t.includes("open")) {
       return `Halls can be booked in hourly blocks between ${OPEN_HOUR}:00 and ${CLOSE_HOUR}:00. Pick a date, then start and end times. Pending requests block double booking until an admin decides.`;
@@ -388,7 +419,7 @@ Booking hours are typically ${OPEN_HOUR}:00–${CLOSE_HOUR}:00. You must only me
     if (t.includes("book") || t.includes("pending")) {
       return `You can book from the hall page, or tell me in one sentence: **which hall**, **which day** (today / tomorrow / a date), and **start–end time** (e.g. 10am–12pm). I translate that into a pending request for an admin to approve.`;
     }
-    return 'Ask for halls by criteria (e.g. "under 200 EGP with projector") or **availability**: "free on 2026-06-15", "available tomorrow", "which halls are free on …". I use the live booking database.';
+      return 'Ask naturally: "what halls do we have", "show me halls with projector", "is B3 available tomorrow", or "details for Hall1". I list **names only** unless you ask for **details**.';
   },
 
   async replyFreeOnDate(
@@ -539,7 +570,12 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
       return { halls: all.slice(0, 25), parsed, browseAll: true };
     }
 
-    if (hasArabicScript(userMessage)) {
+    if (hasArabicScript(userMessage) && looksLikeHallSearchAr(userMessage)) {
+      const all = await HallModel.findAllForAssistantSearch();
+      return { halls: all.slice(0, 25), parsed, browseAll: true };
+    }
+
+    if (looksLikeHallBrowse(userMessage)) {
       const all = await HallModel.findAllForAssistantSearch();
       return { halls: all.slice(0, 25), parsed, browseAll: true };
     }
@@ -555,6 +591,10 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
     const trimmed = userMessage.trim();
     if (trimmed.length <= 2) return AssistantModel.ruleBasedReply(trimmed, lang);
 
+    const allHalls = await HallModel.findAllForAssistantSearch();
+    const includeDetails = userWantsHallDetails(trimmed);
+    const mentioned = resolveHallsFromMessage(trimmed, allHalls);
+
     const freeDate = parseAssistantDate(trimmed);
     if (asksFreeOnDate(trimmed)) {
       if (!freeDate) {
@@ -565,12 +605,56 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
       return await AssistantModel.replyFreeOnDate(freeDate, trimmed, messages, lang);
     }
 
+    if (mentioned.length > 0 && !asksFreeOnDate(trimmed)) {
+      const intro =
+        mentioned.length === 1
+          ? lang === "ar"
+            ? includeDetails
+              ? `تفاصيل القاعة **${mentioned[0].name}**:`
+              : `القاعة المطلوبة:`
+            : includeDetails
+              ? `Details for **${mentioned[0].name}**:`
+              : `You asked about:`
+          : lang === "ar"
+            ? includeDetails
+              ? "تفاصيل القاعات المذكورة:"
+              : "القاعات المذكورة:"
+            : includeDetails
+              ? "Details for the halls you mentioned:"
+              : "Halls you mentioned:";
+
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const ai = await AssistantModel.openAiSearchReply(
+            messages,
+            trimmed,
+            mentioned,
+            intro,
+            lang,
+            includeDetails
+          );
+          if (ai) return ai;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      return formatHallSearchReply(mentioned, intro, lang, includeDetails);
+    }
+
     const { halls, parsed, browseAll } = await AssistantModel.findMatchingHalls(trimmed);
     const structured = hasStructuredCriteria(parsed);
     const searchLike = looksLikeHallSearch(trimmed) || looksLikeHallSearchAr(trimmed);
     const searchIntent = structured || searchLike || browseAll;
 
     if (!searchIntent) {
+      if (process.env.OPENAI_API_KEY) {
+        try {
+          const ai = await AssistantModel.openAiUnderstand(messages, trimmed, allHalls, lang);
+          if (ai) return ai;
+        } catch (e) {
+          console.error(e);
+        }
+      }
       if ((lang === "ar" || hasArabicScript(trimmed)) && process.env.OPENAI_API_KEY) {
         try {
           const ai = await AssistantModel.openAiArabicAssist(messages, trimmed, lang);
@@ -581,15 +665,22 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
       }
       return AssistantModel.ruleBasedReply(trimmed, lang);
     }
-
     const intro =
       browseAll || (lang === "ar" && hasArabicScript(trimmed))
         ? lang === "ar"
-          ? "هذه القاعات المسجّلة لدينا (يمكنك تضييق البحث بالسعر أو البروجيكتور أو التكييف أو السعة أو اسم القاعة):"
-          : "Here are the halls currently in our database (you can narrow this with price, projector, AC, capacity, or a name keyword):"
+          ? includeDetails
+            ? "هذه القاعات المسجّلة لدينا مع التفاصيل:"
+            : "هذه أسماء القاعات المسجّلة لدينا:"
+          : includeDetails
+            ? "Here are the halls in our database with details:"
+            : "Here are the hall names in our database:"
         : lang === "ar"
-          ? "قاعات من **قاعدة البيانات** تطابق معاييرك:"
-          : "Here are halls from our **live database** that match your criteria:";
+          ? includeDetails
+            ? "قاعات من **قاعدة البيانات** تطابق معاييرك (مع التفاصيل):"
+            : "قاعات من **قاعدة البيانات** تطابق معاييرك (الأسماء فقط):"
+          : includeDetails
+            ? "Halls from our **live database** that match your criteria (with details):"
+            : "Hall names from our **live database** that match your criteria:";
 
     if (process.env.OPENAI_API_KEY) {
       try {
@@ -598,7 +689,8 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
           trimmed,
           halls,
           intro,
-          lang
+          lang,
+          includeDetails
         );
         if (ai) return ai;
       } catch (e) {
@@ -606,7 +698,59 @@ ${lang === "ar" ? "\n- Answer in **Modern Standard Arabic** (فصحى مبسطة
       }
     }
 
-    return formatHallSearchReply(halls, intro, lang);
+    return formatHallSearchReply(halls, intro, lang, includeDetails);
+  },
+
+  async openAiUnderstand(
+    messages: { role: string; content: string }[],
+    userText: string,
+    allHalls: HallSearchRow[],
+    lang: AssistantLang
+  ): Promise<string | null> {
+    const key = process.env.OPENAI_API_KEY;
+    if (!key) return null;
+
+    const includeDetails = userWantsHallDetails(userText);
+    const system = `${AssistantModel.systemPrompt()}
+
+You understand natural language about university hall booking (English and Arabic).
+HALLS_JSON is the complete list of real halls. Booking hours ${OPEN_HOUR}:00–${CLOSE_HOUR}:00.
+
+Reply rules:
+- Be friendly and concise, like a helpful campus assistant.
+- If the user asks which halls exist, or mentions halls vaguely → bullet list of **exact hall names only** from HALLS_JSON (no capacity/price/projector/AC).
+- If they name specific hall(s) (e.g. B3, Hall1, معمل 7) without asking for details → reply with **only those names** as bullets.
+- Only include capacity, price, projector, AC, seating when they clearly want **details/specs** (userWantsDetails=${includeDetails}).
+- For availability questions, tell them to ask with a date: "free tomorrow", "available on 2026-06-15".
+- For booking, tell them one sentence: hall + date + time range.
+- Never invent hall names not in HALLS_JSON.
+${lang === "ar" || hasArabicScript(userText) ? "- Reply in Modern Standard Arabic; keep hall names from JSON as-is (Latin)." : ""}
+
+HALLS_JSON:
+${JSON.stringify(allHalls)}`;
+
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: system },
+          ...messages.slice(-10).map((m) => ({ role: m.role, content: m.content })),
+        ],
+        max_tokens: 650,
+        temperature: 0.2,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    return data.choices?.[0]?.message?.content?.trim() || null;
   },
 
   async openAiArabicAssist(
@@ -626,6 +770,7 @@ HALLS_JSON lists real halls (names may stay in Latin).
 
 Rules:
 - Be concise and accurate; do not invent halls not in HALLS_JSON.
+- When listing halls, output **names only** (bullet list). Do **not** include capacity, price, projector, or AC unless the user explicitly asked for details/specs.
 - If they need booking steps, explain: pick hall, date, hours; customer requests become pending until admin approves.
 ${replyAr ? "- Reply in **Modern Standard Arabic** (فصحى مبسطة). Keep official hall names from JSON as-is." : "- Reply in clear, concise English." }
 
@@ -661,23 +806,28 @@ ${JSON.stringify(halls.slice(0, 20))}`;
     lastUserText: string,
     halls: HallSearchRow[],
     introHint: string,
-    lang: AssistantLang = "en"
+    lang: AssistantLang = "en",
+    includeDetails = false
   ): Promise<string | null> {
     const key = process.env.OPENAI_API_KEY;
     if (!key || !lastUserText) return null;
 
+    const detailRule = includeDetails
+      ? "- User wants **details**: for each hall, one short line with capacity, price/hour, projector, AC, seating."
+      : "- User wants **names only**: bullet list of exact hall names. No capacity, price, projector, AC, or seating.";
+
     const system = `${AssistantModel.systemPrompt()}
 
-You are the **hall search assistant**. The user asked for help choosing a hall.
+You are Spot, a natural university hall assistant. Understand casual phrasing, typos, and Arabic.
 
 Rules:
-- ONLY recommend halls that appear in HALLS_JSON below (these are real rows from our SQLite/Prisma database).
-- Always mention halls **by name** (exact strings from JSON).
-- For each suggested hall, add one short line: capacity, price/hour, projector yes/no, AC yes/no, seating type.
-- If HALLS_JSON is empty, say no halls matched and suggest relaxing filters or using the Halls page filters.
-- Do not invent hall names.
-- Keep the answer concise.
-${lang === "ar" ? "\n- Answer in **Modern Standard Arabic**. Keep hall **names** exactly as in HALLS_JSON (Latin spellings)." : ""}
+- ONLY use halls in HALLS_JSON (real database).
+- Match the user's intent; do not add unrelated halls.
+${detailRule}
+- If HALLS_JSON is empty, suggest relaxing filters or opening the Halls page.
+- Never invent hall names.
+- Sound human and helpful, not robotic.
+${lang === "ar" ? "\n- Answer in **Modern Standard Arabic**. Keep hall **names** exactly as in HALLS_JSON." : ""}
 
 INTRO_HINT: ${introHint}
 
@@ -697,7 +847,7 @@ ${JSON.stringify(halls)}`;
           ...messages.slice(-8).map((m) => ({ role: m.role, content: m.content })),
         ],
         max_tokens: 700,
-        temperature: 0.35,
+        temperature: 0.2,
       }),
     });
 

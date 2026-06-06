@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" role="img" aria-label="Hall photo unavailable">
+  <rect width="400" height="260" fill="#1e293b"/>
+  <rect x="40" y="50" width="320" height="160" rx="12" fill="#334155"/>
+  <path fill="#64748b" d="M80 180V110h240v70H80zm20-50h80v30H100zm100 0h80v30h-80z"/>
+  <text x="200" y="230" text-anchor="middle" fill="#94a3b8" font-family="Segoe UI,sans-serif" font-size="14">Photo unavailable</text>
+</svg>
