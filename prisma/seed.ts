@@ -92,7 +92,8 @@ async function main() {
     "Accessible entrance and wide aisles",
   ];
 
-  for (const [idx, row] of hallRows.entries()) {
+  for (let idx = 0; idx < hallRows.length; idx++) {
+    const row = hallRows[idx];
     const hallPhotos = photosForHall(row.name, idx);
 
     const hallData = {
