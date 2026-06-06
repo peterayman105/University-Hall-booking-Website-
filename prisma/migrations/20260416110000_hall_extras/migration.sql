@@ -1,1 +1,0 @@
-ALTER TABLE "Hall" ADD COLUMN "extras" TEXT;
